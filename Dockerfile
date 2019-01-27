@@ -23,7 +23,7 @@ RUN \
 # fetch source code
 RUN \
 	set -ex \
-	&& . /tmp/version.txt\
+	&& . /tmp/version.txt \
 	&& mkdir -p \
 		/tmp/snapraid-${SNAPRAID_VERSION} \
 	&& curl -o \
@@ -36,7 +36,7 @@ RUN \
 # build and archive package
 RUN \
 	set -ex \
-	&& . /tmp/version.txt\
+	&& . /tmp/version.txt \
 	&& mkdir -p \
 		/build \
 	&& cd /tmp/snapraid-${SNAPRAID_VERSION} \
