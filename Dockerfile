@@ -44,7 +44,10 @@ RUN \
 	&& make \
 	&& make check \
 	&& checkinstall -Dy --install=no --nodoc \
-	&& cp *.deb /build/snapraid-${SNAPRAID_VERSION}.deb
+	&& cp *.deb snapraid-${SNAPRAID_VERSION}.deb \
+	&& tar -czvf /build/snapraid-${SNAPRAID_VERSION}.tar.gz -C \
+		/tmp/snapraid-${SNAPRAID_VERSION} \
+		snapraid-${SNAPRAID_VERSION}.deb
 
 # copy files out to /mnt
 CMD ["cp", "-avr", "/build", "/mnt/"]
