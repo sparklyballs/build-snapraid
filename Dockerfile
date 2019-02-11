@@ -1,53 +1,115 @@
-FROM debian:stretch
+ARG DEBIAN_VERSION="stretch" 
+FROM debian:$DEBIAN_VERSION as fetch-stage
+
+############## fetch stage ##############
 
 # environment settings
 ARG DEBIAN_FRONTEND="noninteractive"
 
-# install build packages
+# install fetch packages
 RUN \
-	apt-get update \
+	set -ex \
+	&& apt-get update \
 	&& apt-get install -y \
-		checkinstall \
+	--no-install-recommends \
+		ca-certificates \
 		curl \
-		gcc \
-		git \
-		make
+	\
+# cleanup
+	\
+	&& rm -rf \
+		/tmp/* \
+		/var/lib/apt/lists/* \
+		/var/tmp/*
 
-# get package version
-RUN \
-	SNAPRAID_RELEASE=$(curl -sX GET "https://api.github.com/repos/amadvance/snapraid/releases/latest" \
-		| awk '/tag_name/{print $4;exit}' FS='[""]') \
-	&& SNAPRAID_VERSION=${SNAPRAID_RELEASE#v} \
-	&& echo "SNAPRAID_VERSION=${SNAPRAID_VERSION}" > /tmp/version.txt
+# set shell
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # fetch source code
 RUN \
 	set -ex \
-	&& . /tmp/version.txt \
 	&& mkdir -p \
-		/tmp/snapraid-${SNAPRAID_VERSION} \
+		/tmp/snapraid-temp \
+	&& SNAPRAID_RELEASE=$(curl -sX GET "https://api.github.com/repos/amadvance/snapraid/releases/latest" \
+		| awk '/tag_name/{print $4;exit}' FS='[""]') || : \
+	&& SNAPRAID_VERSION="${SNAPRAID_RELEASE#v}" \
 	&& curl -o \
-	snapraid-${SNAPRAID_VERSION}.tar.gz -L \
+	snapraid.tar.gz -L \
 	"https://github.com/amadvance/snapraid/releases/download/v${SNAPRAID_VERSION}/snapraid-${SNAPRAID_VERSION}.tar.gz" \
 	&& tar xf \
-	snapraid-${SNAPRAID_VERSION}.tar.gz -C \
-	/tmp/snapraid-${SNAPRAID_VERSION} --strip-components=1
+	snapraid.tar.gz -C \
+	/tmp/snapraid-temp --strip-components=1 \
+	&& echo "SNAPRAID_VERSION=${SNAPRAID_VERSION}" > /tmp/version.txt
 
-# build and archive package
+FROM debian:$DEBIAN_VERSION as build-stage
+
+############## build stage ##############
+
+# environment settings
+ARG DEBIAN_FRONTEND="noninteractive"
+
+# install build packages
 RUN \
 	set -ex \
-	&& . /tmp/version.txt \
-	&& mkdir -p \
-		/build \
-	&& cd /tmp/snapraid-${SNAPRAID_VERSION} \
+	&& apt-get update \
+	&& apt-get install -y \
+	--no-install-recommends \
+		checkinstall \
+		g++ \
+		gcc \
+		make \
+	\
+# cleanup
+	\
+	&& rm -rf \
+		/tmp/* \
+		/var/lib/apt/lists/* \
+		/var/tmp/*
+
+# copy artifacts from fetch stage
+COPY --from=fetch-stage /tmp/snapraid-temp /tmp/snapraid-temp
+COPY --from=fetch-stage /tmp/version.txt /tmp/version.txt
+ 
+# set shell
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# set workdir 
+WORKDIR /tmp/snapraid-temp
+
+# build package
+# hadolint ignore=SC1091
+RUN \
+	source /tmp/version.txt \
+	&& set -ex \
 	&& ./configure \
 	&& make \
 	&& make check \
-	&& checkinstall -Dy --install=no --nodoc \
-	&& cp *.deb snapraid-${SNAPRAID_VERSION}.deb \
-	&& tar -czvf /build/snapraid-${SNAPRAID_VERSION}.tar.gz -C \
-		/tmp/snapraid-${SNAPRAID_VERSION} \
-		snapraid-${SNAPRAID_VERSION}.deb
+	&& checkinstall --pkgname snapraid- --pkgver "${SNAPRAID_VERSION}" -Dy --install=no --nodoc
+	
+FROM debian:$DEBIAN_VERSION
+
+############## package stage ##############
+
+# copy fetch and build artifacts
+COPY --from=build-stage /tmp/snapraid-temp/*.deb /tmp/snapraid/
+COPY --from=fetch-stage /tmp/version.txt /tmp/version.txt
+
+# set workdir 
+WORKDIR /tmp/snapraid
+
+# set shell
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# archive package
+# hadolint ignore=SC1091
+RUN \
+	source /tmp/version.txt \
+	&& set -ex \
+	&& mkdir -p \
+		/build \
+	&& mv ./*.deb snapraid-"${SNAPRAID_VERSION}".deb \
+	&& tar -czvf /build/snapraid-"${SNAPRAID_VERSION}".tar.gz \
+		snapraid-"${SNAPRAID_VERSION}".deb
 
 # copy files out to /mnt
 CMD ["cp", "-avr", "/build", "/mnt/"]
