@@ -29,7 +29,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN \
 	set -ex \
 	&& mkdir -p \
-		/tmp/snapraid-temp \
+		/tmp/snapraid-src \
 	&& SNAPRAID_RELEASE=$(curl -sX GET "https://api.github.com/repos/amadvance/snapraid/releases/latest" \
 		| awk '/tag_name/{print $4;exit}' FS='[""]') || : \
 	&& SNAPRAID_VERSION="${SNAPRAID_RELEASE#v}" \
@@ -38,7 +38,7 @@ RUN \
 	"https://github.com/amadvance/snapraid/releases/download/v${SNAPRAID_VERSION}/snapraid-${SNAPRAID_VERSION}.tar.gz" \
 	&& tar xf \
 	snapraid.tar.gz -C \
-	/tmp/snapraid-temp --strip-components=1 \
+	/tmp/snapraid-src --strip-components=1 \
 	&& echo "SNAPRAID_VERSION=${SNAPRAID_VERSION}" > /tmp/version.txt
 
 FROM debian:$DEBIAN_VERSION as build-stage
@@ -67,14 +67,14 @@ RUN \
 		/var/tmp/*
 
 # copy artifacts from fetch stage
-COPY --from=fetch-stage /tmp/snapraid-temp /tmp/snapraid-temp
+COPY --from=fetch-stage /tmp/snapraid-src /tmp/snapraid-src
 COPY --from=fetch-stage /tmp/version.txt /tmp/version.txt
  
 # set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # set workdir 
-WORKDIR /tmp/snapraid-temp
+WORKDIR /tmp/snapraid-src
 
 # build package
 # hadolint ignore=SC1091
@@ -91,7 +91,7 @@ FROM debian:$DEBIAN_VERSION
 ############## package stage ##############
 
 # copy fetch and build artifacts
-COPY --from=build-stage /tmp/snapraid-temp/*.deb /tmp/snapraid/
+COPY --from=build-stage /tmp/snapraid-src/*.deb /tmp/snapraid/
 COPY --from=fetch-stage /tmp/version.txt /tmp/version.txt
 
 # set workdir 
