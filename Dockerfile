@@ -35,10 +35,10 @@ RUN \
 		| jq -r .tag_name) \
 	&& SNAPRAID_VERSION="${SNAPRAID_RELEASE#v}" \
 	&& curl -o \
-	snapraid.tar.gz -L \
+	/tmp/snapraid.tar.gz -L \
 	"https://github.com/amadvance/snapraid/releases/download/v${SNAPRAID_VERSION}/snapraid-${SNAPRAID_VERSION}.tar.gz" \
 	&& tar xf \
-	snapraid.tar.gz -C \
+	/tmp/snapraid.tar.gz -C \
 	/tmp/snapraid-src --strip-components=1 \
 	&& echo "SNAPRAID_VERSION=${SNAPRAID_VERSION}" > /tmp/version.txt
 
