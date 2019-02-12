@@ -14,6 +14,7 @@ RUN \
 	--no-install-recommends \
 		ca-certificates \
 		curl \
+		jq \
 	\
 # cleanup
 	\
@@ -31,7 +32,7 @@ RUN \
 	&& mkdir -p \
 		/tmp/snapraid-src \
 	&& SNAPRAID_RELEASE=$(curl -sX GET "https://api.github.com/repos/amadvance/snapraid/releases/latest" \
-		| awk '/tag_name/{print $4;exit}' FS='[""]') || : \
+		| jq -r .tag_name) \
 	&& SNAPRAID_VERSION="${SNAPRAID_RELEASE#v}" \
 	&& curl -o \
 	snapraid.tar.gz -L \
