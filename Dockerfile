@@ -1,5 +1,5 @@
-ARG DEBIAN_VERSION="stretch" 
-FROM debian:$DEBIAN_VERSION as fetch-stage
+ARG DEBIAN_VER="stretch" 
+FROM debian:${DEBIAN_VER}-slim as fetch-stage
 
 ############## fetch stage ##############
 
@@ -42,7 +42,7 @@ RUN \
 	/tmp/snapraid-src --strip-components=1 \
 	&& echo "SNAPRAID_VERSION=${SNAPRAID_VERSION}" > /tmp/version.txt
 
-FROM debian:$DEBIAN_VERSION as build-stage
+FROM debian:${DEBIAN_VER}-slim as build-stage
 
 ############## build stage ##############
 
@@ -87,7 +87,7 @@ RUN \
 	&& make check \
 	&& checkinstall --pkgname snapraid- --pkgver "${SNAPRAID_VERSION}" -Dy --install=no --nodoc
 	
-FROM debian:$DEBIAN_VERSION
+FROM debian:${DEBIAN_VER}-slim
 
 ############## package stage ##############
 
