@@ -14,7 +14,6 @@ RUN \
 	--no-install-recommends \
 		ca-certificates \
 		curl \
-		jq \
 	\
 # cleanup
 	\
@@ -26,21 +25,26 @@ RUN \
 # set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# fetch source code
+# fetch version file
 RUN \
 	set -ex \
+	&& curl -o \
+	/tmp/version.txt -L \
+	"https://raw.githubusercontent.com/sparklyballs/versioning/master/version.txt"
+
+# fetch source code
+# hadolint ignore=SC1091
+RUN \
+	. /tmp/version.txt \
+	&& set -ex \
 	&& mkdir -p \
 		/tmp/snapraid-src \
-	&& SNAPRAID_RELEASE=$(curl -sX GET "https://api.github.com/repos/amadvance/snapraid/releases/latest" \
-		| jq -r .tag_name) \
-	&& SNAPRAID_VERSION="${SNAPRAID_RELEASE#v}" \
 	&& curl -o \
 	/tmp/snapraid.tar.gz -L \
-	"https://github.com/amadvance/snapraid/releases/download/v${SNAPRAID_VERSION}/snapraid-${SNAPRAID_VERSION}.tar.gz" \
+	"https://github.com/amadvance/snapraid/releases/download/v${SNAPRAID_RELEASE}/snapraid-${SNAPRAID_RELEASE}.tar.gz" \
 	&& tar xf \
 	/tmp/snapraid.tar.gz -C \
-	/tmp/snapraid-src --strip-components=1 \
-	&& echo "SNAPRAID_VERSION=${SNAPRAID_VERSION}" > /tmp/version.txt
+	/tmp/snapraid-src --strip-components=1
 
 FROM debian:${DEBIAN_VER}-slim as build-stage
 
@@ -85,7 +89,7 @@ RUN \
 	&& ./configure \
 	&& make \
 	&& make check \
-	&& checkinstall --pkgname snapraid- --pkgver "${SNAPRAID_VERSION}" -Dy --install=no --nodoc
+	&& checkinstall --pkgname snapraid- --pkgver "${SNAPRAID_RELEASE}" -Dy --install=no --nodoc
 	
 FROM debian:${DEBIAN_VER}-slim
 
@@ -108,10 +112,10 @@ RUN \
 	&& set -ex \
 	&& mkdir -p \
 		/build \
-	&& mv ./*.deb snapraid-"${SNAPRAID_VERSION}".deb \
-	&& tar -czvf /build/snapraid-"${SNAPRAID_VERSION}".tar.gz \
-		snapraid-"${SNAPRAID_VERSION}".deb \
-	&& chown 1000:1000 /build/snapraid-"${SNAPRAID_VERSION}".tar.gz
+	&& mv ./*.deb snapraid-"${SNAPRAID_RELEASE}".deb \
+	&& tar -czvf /build/snapraid-"${SNAPRAID_RELEASE}".tar.gz \
+		snapraid-"${SNAPRAID_RELEASE}".deb \
+	&& chown 1000:1000 /build/snapraid-"${SNAPRAID_RELEASE}".tar.gz
 
 # copy files out to /mnt
 CMD ["cp", "-avr", "/build", "/mnt/"]
