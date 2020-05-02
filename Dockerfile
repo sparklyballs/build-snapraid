@@ -62,9 +62,8 @@ RUN \
 		g++ \
 		gcc \
 		make \
-
 	&& echo "deb http://deb.debian.org/debian buster-backports main" \
-		| sudo tee /etc/apt/sources.list.d/backports.list \
+		| tee /etc/apt/sources.list.d/backports.list \
 	&& apt-get update \
 	&& apt-get install -y \
 	-t buster-backports \
