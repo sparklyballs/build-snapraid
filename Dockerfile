@@ -115,7 +115,7 @@ RUN \
 	&& mv ./*.deb snapraid-"${SNAPRAID_RELEASE}".deb \
 	&& tar -czvf /build/snapraid-"${SNAPRAID_RELEASE}".tar.gz \
 		snapraid-"${SNAPRAID_RELEASE}".deb \
-	&& chown 1000:1000 /build/snapraid-"${SNAPRAID_RELEASE}".tar.gz
+	&& chown -R 1000:1000 /build
 
 # copy files out to /mnt
 CMD ["cp", "-avr", "/build", "/mnt/"]
