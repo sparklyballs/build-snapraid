@@ -53,6 +53,9 @@ FROM debian:${DEBIAN_VER}-slim as build-stage
 # environment settings
 ARG DEBIAN_FRONTEND="noninteractive"
 
+# set shell
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # install build packages
 RUN \
 	set -ex \
